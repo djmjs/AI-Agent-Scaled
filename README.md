@@ -26,18 +26,18 @@ graph TD
     
     subgraph "Agent Graph"
         Orch --> TopicCheck{Topic Switch?}
-        TopicCheck -->|Yes| ClearHist[Ignore History]
-        TopicCheck -->|No| KeepHist[Keep History]
+        TopicCheck -->|Yes| ClearHist["Ignore History"]
+        TopicCheck -->|No| KeepHist["Keep History"]
         
         ClearHist --> Reform[Query Reformulator]
         KeepHist --> Reform
         
-        Reform --> Router[Semantic Router]
+        Reform --> Router["Semantic Router"]
         
-        Router -->|Technical/Papers| RAG[Vector DB Retrieval]
-        Router -->|News/Facts/People| Web[Web Search (Tavily)]
-        Router -->|Profile Updates| Tools[Tool Execution]
-        Router -->|Chit-Chat/Meta| Gen[Generation]
+        Router -->|Technical/Papers| RAG["Vector DB Retrieval"]
+        Router -->|News/Facts/People| Web["Web Search (Tavily)"]
+        Router -->|Profile Updates| Tools["Tool Execution"]
+        Router -->|Chit-Chat/Meta| Gen["Generation"]
         
         RAG --> Grader{Relevance Grader}
         Grader -->|Relevant| Gen
@@ -71,54 +71,44 @@ To prevent hallucinations, we implement an **"LLM-as-a-Judge"** pattern.
 ### 4. Memory Management
 *   **Short-Term Memory**: Implemented using `ConversationSummaryBufferMemory`. It keeps recent messages raw but summarizes older ones to save context window space.
 *   **State Management**: The `GraphOrchestrator` maintains a strictly typed `AgentState` that persists across the graph nodes, ensuring thread safety and clear data flow.
-### 5. Detailed Data Flow
+### 5. Query Lifecycle (Simplified)
 
 ```mermaid
-sequenceDiagram
-    participant U as User
-    participant O as Orchestrator (LangGraph)
-    participant M as Memory (STM)
-    participant Ref as Reformulator
-    participant Rou as Router
-    participant RAG as Retriever (Qdrant)
-    participant RR as ReRanker
-    participant G as Grader (Judge)
-    participant Web as Web Search
-    participant LLM as Generator
+stateDiagram-v2
+    direction TB
+    
+    [*] --> Refine
+    
+    state "1. Refine Query" as Refine {
+        [*] --> Check_History
+        Check_History --> Reformulate: Topic OK
+        Check_History --> Clear_Memory: New Topic
+        Clear_Memory --> Reformulate
+    }
+    
+    Refine --> Route
+    
+    state "2. Route Intent" as Route {
+        [*] --> Classify
+        Classify --> Database: Technical / Papers
+        Classify --> Web: News / Facts / People
+        Classify --> Generate: General Chat
+    }
 
-    U->>O: "How old is he?"
-    O->>M: Get Chat History
-    M-->>O: History: "User: Elon Musk..."
-    
-    O->>Ref: Reformulate("How old is he?", History)
-    Ref-->>O: "How old is Elon Musk?"
-    
-    O->>Rou: Route("How old is Elon Musk?")
-    Rou-->>O: "WEB" (or "DATABASE")
-    
-    alt Route == DATABASE
-        O->>RAG: Retrieve("How old is Elon Musk?")
-        RAG-->>O: [Doc A, Doc B, Doc C]
-        O->>RR: ReRank([Docs])
-        RR-->>O: [Sorted Docs]
-        
-        O->>G: Grade(Query, Docs)
-        alt Grade == Irrelevant
-            G-->>O: "No"
-            O->>Web: Search("How old is Elon Musk?")
-            Web-->>O: [Web Results]
-        else Grade == Relevant
-            G-->>O: "Yes"
-        end
-    else Route == WEB
-        O->>Web: Search("How old is Elon Musk?")
-        Web-->>O: [Web Results]
-    end
-    
-    O->>LLM: Generate(Query, Context)
-    LLM-->>O: "Elon Musk is 52 years old."
-    O->>M: Save Interaction
-    O->>U: Final Response
+    state "3. Database (RAG)" as Database {
+        Retrieve_Docs --> ReRank
+        ReRank --> Grade_Relevance
+        Grade_Relevance --> Web: Irrelevant (Fallback)
+        Grade_Relevance --> Generate: Relevant
+    }
+
+    state "4. Web Search" as Web {
+        Search_Tavily --> Generate
+    }
+
+    state "5. Final Response" as Generate {
+        Synthesize_Answer --> [*]
+    }
 ```
 
 ## 📂 Component Breakdown
@@ -198,6 +188,7 @@ These are specialized classes that handle specific tasks.
     .\setup.ps1
     ```
     *Note: The `setup.ps1` script automatically handles the installation of `onnxruntime-directml` and removes conflicting packages to ensure GPU acceleration works.*
+
     ```powershell
     pip install --force-reinstall onnxruntime-directml
     ```
