@@ -23,14 +23,14 @@ The system follows a **Router-First Agentic Workflow**:
 
 ```mermaid
 graph TD
-    Start([User Query]) --> Context[Manage Context\n(Fetch LTM + STM)]
+    Start([User Query]) --> Context["Manage Context\n(Fetch LTM + STM)"]
     Context --> Router{Router Decision}
 
     %% Fast Track
     Router -- Direct Answer --> Generate[Generate Response]
 
     %% Standard Tracks
-    Router -- DB/Web/Tool/General --> Reformulate[Reformulate Query\n(Route Specific)]
+    Router -- DB/Web/Tool/General --> Reformulate["Reformulate Query\n(Route Specific)"]
     Reformulate --> Dispatch((Dispatch))
 
     %% Specific Handling
