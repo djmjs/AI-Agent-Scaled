@@ -1,4 +1,4 @@
-# Production Agent System
+# Production Agent System 
 
 This directory contains a modular, production-ready architecture for an **Agentic RAG System**. Unlike simple linear pipelines, this system uses a **Graph-based Orchestrator** (LangGraph) to dynamically decide the best course of action for each user query.
 
@@ -17,11 +17,10 @@ This directory contains a modular, production-ready architecture for an **Agenti
 5.  **Generation**: The LLM generates a final answer using the retrieved context (if any).
 6.  **Memory Update**: After the response, the system analyzes the interaction to extract and save new user details to LTM.
 
-## 🏗️ Architecture
+## 🏗️ Architecture 
 
 The system follows a **Router-First Agentic Workflow**:
 
-```mermaid
 graph TD
     Start([User Query]) --> Context[Manage Context\n(Fetch LTM + STM)]
     Context --> Router{Router Decision}
@@ -49,7 +48,7 @@ graph TD
     Tools --> Generate
 
     Generate --> End([Final Answer])
-```
+
 
 ## 🔧 Technical Deep Dive
 
